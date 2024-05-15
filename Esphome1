@@ -1,0 +1,141 @@
+substitutions:
+  name: esphome-web-4425b8
+  friendly_name: ESPHome Web 4425b8
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.web
+    version: '1.0'
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  services:
+  - service: play_rtttl
+    variables:
+      song_str: string
+    then:
+      - rtttl.play:
+          rtttl: !lambda 'return song_str;'
+
+
+# Allow Over-The-Air updates
+ota:
+
+# Allow provisioning Wi-Fi via serial
+improv_serial:
+
+wifi:
+  # Set up a wifi access point
+  ap: {}
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device via WiFi AP.
+captive_portal:
+
+dashboard_import:
+  package_import_url: github://esphome/example-configs/esphome-web/esp32.yaml@main
+  import_full_config: true
+
+# Sets up Bluetooth LE (Only on ESP32) to allow the user
+# to provision wifi credentials to the device.
+esp32_improv:
+  authorizer: none
+
+# To have a "next url" for improv serial
+web_server:
+
+
+
+switch:
+  - platform: gpio
+    pin: GPIO27
+    name: "Relay 1"
+    inverted: true
+
+
+i2c:
+  - id: test
+    scan: True
+    sda: GPIO26
+    scl: GPIO33
+   
+sensor:
+- platform: adc
+  pin:  GPIO39
+  name: "smoke sensor"
+  update_interval: 10s
+  attenuation: auto
+  filters:
+     - multiply: 3.3
+  unit_of_measurement: "%"
+  icon:  "mid:percent"
+
+
+- platform: aht10
+  i2c_id: test
+  temperature:
+    id: temperature
+    name: "Office Temperature"
+  humidity:
+    id: humidity
+    name: "Office Humidity"
+  update_interval: 5s
+
+
+binary_sensor:
+  - platform: gpio
+    pin: GPIO13
+    id: motion
+    name: "Motion Sensor"
+    device_class: motion
+
+
+
+
+display:
+  - platform: ssd1306_i2c
+    i2c_id: test
+    model: "SSD1306_128X64"
+    lambda: |-
+      if (id(motion).state) {
+        it.fill(COLOR_OFF);
+        it.print(0, 60, id(roboto), TextAlign::BASELINE_LEFT, "DETECTED");
+      } else {
+        it.fill(COLOR_OFF);
+        it.print(0, 60, id(roboto), TextAlign::BASELINE_LEFT, "CLEAR");
+      }
+      if (id(temperature).has_state()) {
+        it.printf(127, 23, id(roboto), TextAlign::TOP_RIGHT, "%.1f°C", id(temperature).state);
+      }
+      if (id(humidity).has_state()) {
+        it.printf(127, 60, id(roboto), TextAlign::BASELINE_RIGHT, "%.1f%%",id(humidity).state);
+      }
+
+
+
+
+output:
+  - platform: ledc
+    pin: GPIO16
+    id: rtttl_out
+
+
+rtttl:
+  output: rtttl_out
+
+
+font:
+  - file: "gfonts://Roboto"
+    id: roboto
+    size: 15
